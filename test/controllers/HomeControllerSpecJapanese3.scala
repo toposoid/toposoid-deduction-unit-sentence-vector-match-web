@@ -18,13 +18,14 @@ package controllers
 
 import akka.util.Timeout
 import com.ideal.linked.common.DeploymentConverter.conf
-import com.ideal.linked.toposoid.common.{CLAIM, PREMISE, TRANSVERSAL_STATE, ToposoidUtils, TransversalState}
+import com.ideal.linked.toposoid.common.{CLAIM, PREMISE, PROPOSITION_ID, TRANSVERSAL_STATE, ToposoidUtils, TransversalState, UNSPECIFIED}
 import com.ideal.linked.toposoid.knowledgebase.featurevector.model.{FeatureVectorId, FeatureVectorIdentifier}
 import com.ideal.linked.toposoid.knowledgebase.regist.model.{Knowledge, KnowledgeSentenceSet, PropositionRelation}
 import com.ideal.linked.toposoid.protocol.model.base.AnalyzedSentenceObjects
 import com.ideal.linked.toposoid.protocol.model.parser.{InputSentence, InputSentenceForParser, KnowledgeForParser, KnowledgeSentenceSetForParser}
-import com.ideal.linked.toposoid.sentence.transformer.neo4j.Sentence2Neo4jTransformer
+import com.ideal.linked.toposoid.test.utils.TestUtils
 import com.ideal.linked.toposoid.vectorizer.FeatureVectorizer
+import controllers.TestUtilsEx.{deleteFeatureVector, deleteNeo4JAllData, registerSingleClaim}
 import io.jvm.uuid.UUID
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatestplus.play.PlaySpec
@@ -43,17 +44,17 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
   val transversalStateJson:String = Json.toJson(transversalState).toString()
 
   before {
-    TestUtils.deleteNeo4JAllData(transversalState)
+    deleteNeo4JAllData(transversalState)
     Thread.sleep(5000)
   }
 
   override def beforeAll(): Unit = {
     ToposoidUtils.callComponent("{}", conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_HOST"), conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_PORT"), "createSchema", transversalState)
-    TestUtils.deleteNeo4JAllData(transversalState)
+    deleteNeo4JAllData(transversalState)
   }
 
   override def afterAll(): Unit = {
-    TestUtils.deleteNeo4JAllData(transversalState)
+    deleteNeo4JAllData(transversalState)
   }
 
   override implicit def defaultAwaitTimeout: Timeout = 600.seconds
@@ -70,21 +71,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
   val paraphraseC = "物体の運動する速さは光の速さを超えない。"
   val paraphraseD = "特殊相対性理論において物体は運動することにより時間がゆっくり進む。"
 
-  def registSingleClaim(knowledgeForParser: KnowledgeForParser): Unit = {
-    val knowledgeSentenceSetForParser = KnowledgeSentenceSetForParser(
-      List.empty[KnowledgeForParser],
-      List.empty[PropositionRelation],
-      List(knowledgeForParser),
-      List.empty[PropositionRelation])
-    Sentence2Neo4jTransformer.createGraph(knowledgeSentenceSetForParser, transversalState)
-    FeatureVectorizer.createVector(knowledgeSentenceSetForParser, transversalState)
-    Thread.sleep(5000)
-  }
 
-  private def deleteFeatureVector(featureVectorIdentifier: FeatureVectorIdentifier): Unit = {
-    val json: String = Json.toJson(featureVectorIdentifier).toString()
-    ToposoidUtils.callComponent(json, conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_HOST"), conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_PORT"), "delete", transversalState)
-  }
 
   "The specification21" should {
     "returns an appropriate response" in {
@@ -100,8 +87,8 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase2 = Knowledge(paraphraseB, "ja_JP", "{}", false)
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge2))
-      registSingleClaim(KnowledgeForParser(propositionId2, sentenceId2, knowledge3))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge2), transversalState)
+      registerSingleClaim(KnowledgeForParser(propositionId2, sentenceId2, knowledge3), transversalState)
       val propositionIdForInference = UUID.random.toString
       val premiseKnowledge = List(KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase1))
       val claimKnowledge = List(KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase2), KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase3))
@@ -119,8 +106,8 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 2)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 0)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId2, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
     }
   }
 
@@ -144,7 +131,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
         List(KnowledgeForParser(propositionId1, sentenceId2, knowledge2), KnowledgeForParser(propositionId1, sentenceId3, knowledge3)),
         List(PropositionRelation("AND", 0, 1)))
 
-      Sentence2Neo4jTransformer.createGraph(knowledgeSentenceSetForParser, transversalState)
+      TestUtils.registerData(knowledgeSentenceSetForParser, transversalState)
       FeatureVectorizer.createVector(knowledgeSentenceSetForParser, transversalState)
       Thread.sleep(5000)
 
@@ -164,9 +151,9 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 0)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = PREMISE.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId2, sentenceType = CLAIM.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = PREMISE.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId2, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
     }
   }
 
@@ -186,14 +173,14 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase2 = Knowledge(paraphraseB, "ja_JP", "{}", false)
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1), transversalState)
 
       val knowledgeSentenceSetForParser = KnowledgeSentenceSetForParser(
         List(KnowledgeForParser(propositionId2, sentenceId2, knowledge1)),
         List.empty[PropositionRelation],
         List(KnowledgeForParser(propositionId2, sentenceId3, knowledge2), KnowledgeForParser(propositionId2, sentenceId4, knowledge3)),
         List(PropositionRelation("AND", 0, 1)))
-      Sentence2Neo4jTransformer.createGraph(knowledgeSentenceSetForParser, transversalState)
+      TestUtils.registerData(knowledgeSentenceSetForParser, transversalState)
       FeatureVectorizer.createVector(knowledgeSentenceSetForParser, transversalState)
       Thread.sleep(5000)
 
@@ -213,10 +200,10 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 1)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 2)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 2)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId2, sentenceType = PREMISE.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId4, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = PREMISE.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId4, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
 
     }
   }
@@ -238,9 +225,9 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase2 = Knowledge(paraphraseB, "ja_JP", "{}", false)
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1))
-      registSingleClaim(KnowledgeForParser(propositionId2, sentenceId2, knowledge2))
-      registSingleClaim(KnowledgeForParser(propositionId3, sentenceId3, knowledge3))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1), transversalState)
+      registerSingleClaim(KnowledgeForParser(propositionId2, sentenceId2, knowledge2), transversalState)
+      registerSingleClaim(KnowledgeForParser(propositionId3, sentenceId3, knowledge3), transversalState)
 
       val propositionIdForInference = UUID.random.toString
       val premiseKnowledge = List(KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase1))
@@ -258,9 +245,9 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 1)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 2)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 0)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId2, sentenceType = CLAIM.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId3, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId3, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
     }
   }
 
@@ -283,7 +270,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
         List(KnowledgeForParser(propositionId1, sentenceId2, knowledge2)),
         List.empty[PropositionRelation])
 
-      Sentence2Neo4jTransformer.createGraph(knowledgeSentenceSetForParser, transversalState)
+      TestUtils.registerData(knowledgeSentenceSetForParser, transversalState)
       FeatureVectorizer.createVector(knowledgeSentenceSetForParser, transversalState)
       Thread.sleep(5000)
 
@@ -303,8 +290,8 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 0)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = PREMISE.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId2, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = PREMISE.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId2, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
     }
   }
 
@@ -323,14 +310,14 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase2 = Knowledge(paraphraseB, "ja_JP", "{}", false)
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1), transversalState)
 
       val knowledgeSentenceSetForParser = KnowledgeSentenceSetForParser(
         List(KnowledgeForParser(propositionId2, sentenceId2, knowledge1)),
         List.empty[PropositionRelation],
         List(KnowledgeForParser(propositionId2, sentenceId3, knowledge2)),
         List.empty[PropositionRelation])
-      Sentence2Neo4jTransformer.createGraph(knowledgeSentenceSetForParser, transversalState)
+      TestUtils.registerData(knowledgeSentenceSetForParser, transversalState)
       FeatureVectorizer.createVector(knowledgeSentenceSetForParser, transversalState)
       Thread.sleep(5000)
 
@@ -352,9 +339,9 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 1)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 1)
 
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId2, sentenceType = PREMISE.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = PREMISE.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
 
     }
   }
@@ -374,14 +361,14 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase2 = Knowledge(paraphraseB, "ja_JP", "{}", false)
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1), transversalState)
 
       val knowledgeSentenceSetForParser = KnowledgeSentenceSetForParser(
         List(KnowledgeForParser(propositionId2, sentenceId2, knowledge1)),
         List.empty[PropositionRelation],
         List(KnowledgeForParser(propositionId2, sentenceId3, knowledge3)),
         List.empty[PropositionRelation])
-      Sentence2Neo4jTransformer.createGraph(knowledgeSentenceSetForParser, transversalState)
+      TestUtils.registerData(knowledgeSentenceSetForParser, transversalState)
       FeatureVectorizer.createVector(knowledgeSentenceSetForParser, transversalState)
       Thread.sleep(5000)
 
@@ -403,9 +390,9 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 1)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 1)
 
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId2, sentenceType = PREMISE.index, lang = "ja_JP"))
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId2, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = PREMISE.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId3, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
 
     }
   }
@@ -424,7 +411,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
       val paraphrase4 = Knowledge(paraphraseD, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1), transversalState)
 
       val propositionIdForInference = UUID.random.toString
       val premiseKnowledge = List(KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase1), KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase2))
@@ -443,7 +430,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 1)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 0)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
 
     }
   }
@@ -462,7 +449,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
       val paraphrase4 = Knowledge(paraphraseD, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge2))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge2), transversalState)
 
       val propositionIdForInference = UUID.random.toString
       val premiseKnowledge = List(KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase1), KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase2))
@@ -481,7 +468,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 1)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 0)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
     }
   }
 
@@ -499,7 +486,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
       val paraphrase4 = Knowledge(paraphraseD, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge3))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge3), transversalState)
 
       val propositionIdForInference = UUID.random.toString
       val premiseKnowledge = List(KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase1), KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase2))
@@ -517,7 +504,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 1)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 0)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
     }
   }
 
@@ -535,7 +522,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       val paraphrase3 = Knowledge(paraphraseC, "ja_JP", "{}", false)
       val paraphrase4 = Knowledge(paraphraseD, "ja_JP", "{}", false)
 
-      registSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge4))
+      registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge4), transversalState)
 
       val propositionIdForInference = UUID.random.toString
       val premiseKnowledge = List(KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase1), KnowledgeForParser(propositionIdForInference, UUID.random.toString, paraphrase2))
@@ -554,7 +541,7 @@ class HomeControllerSpecJapanese3 extends PlaySpec with BeforeAndAfter with Befo
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(PREMISE.index) && x.deductionResult.status).size == 0)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.status).size == 1)
       assert(analyzedSentenceObjects.analyzedSentenceObjects.filter(x => x.knowledgeBaseSemiGlobalNode.sentenceType.equals(CLAIM.index) && x.deductionResult.havePremiseInGivenProposition).size == 0)
-      deleteFeatureVector(FeatureVectorIdentifier(propositionId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP"))
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = CLAIM.index, lang = "ja_JP", PROPOSITION_ID.index, UNSPECIFIED.index), transversalState)
     }
   }
 
