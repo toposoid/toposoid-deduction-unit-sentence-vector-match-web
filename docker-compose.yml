@@ -1,7 +1,7 @@
 version: '3'
 services:
   toposoid-deduction-unit-sentence-vector-match-web:
-    image: toposoid/toposoid-deduction-unit-sentence-vector-match-web:0.6-SNAPSHOT
+    image: toposoid/toposoid-deduction-unit-sentence-vector-match-web:0.6
     environment:
       - PRIVATE_IP_ADDRESS=localhost
       - TOPOSOID_GRAPHDB_WEB_HOST=data-accessor-neo4j-web
@@ -21,7 +21,7 @@ services:
       - toposoid-common-nlp-japanese-web
       - toposoid-common-nlp-english-web
   data-accessor-neo4j-web:
-    image: toposoid/data-accessor-neo4j-web:0.6-SNAPSHOT
+    image: toposoid/data-accessor-neo4j-web:0.6
     environment:
       - PRIVATE_IP_ADDRESS=data-accessor-neo4j-web
       - TOPOSOID_GRAPHDB_HOST=neo4j
@@ -29,7 +29,7 @@ services:
     ports:
       - 9005:9005
   toposoid-knowledge-register-web:
-    image: toposoid/toposoid-knowledge-register-web:0.6-SNAPSHOT
+    image: toposoid/toposoid-knowledge-register-web:0.6
     environment:
       - PRIVATE_IP_ADDRESS=localhost
       - TOPOSOID_GRAPHDB_HOST=neo4j
@@ -54,7 +54,7 @@ services:
       - 9002:9002
 
   toposoid-knowledge-register-subscriber:
-    image: toposoid/toposoid-knowledge-register-subscriber:0.6-SNAPSHOT
+    image: toposoid/toposoid-knowledge-register-subscriber:0.6
     environment:
       - TOPOSOID_GRAPHDB_WEB_HOST=data-accessor-neo4j-web
       - TOPOSOID_GRAPHDB_WEB_PORT=9005
@@ -86,13 +86,13 @@ services:
       - TOPOSOID_MQ_SECRET_KEY=__##YOUR_AWS_SECRET_KEY##__
 
   elasticmq:
-    image: toposoid/toposoid-elasticmq:0.6-SNAPSHOT
+    image: toposoid/toposoid-elasticmq:0.6
     ports:
       - 9324:9324
       - 9325:9325
 
   data-accessor-mysql-web:
-    image: toposoid/data-accessor-mysql-web:0.6-SNAPSHOT
+    image: toposoid/data-accessor-mysql-web:0.6
     environment:
       - PRIVATE_IP_ADDRESS=data-accessor-mysql-web
       - TOPOSOID_RDB_HOST= mysql
@@ -107,7 +107,7 @@ services:
       - mysql
 
   mysql:
-    image: toposoid/toposoid-rdb:0.6-SNAPSHOT
+    image: toposoid/toposoid-rdb:0.6
     environment:
       - MYSQL_DATABASE=toposoiddb
       - MYSQL_USER=toposoid
@@ -118,14 +118,14 @@ services:
       - 3306:3306
 
   toposoid-sentence-parser-japanese-web:
-    image: toposoid/toposoid-sentence-parser-japanese-web:0.6-SNAPSHOT
+    image: toposoid/toposoid-sentence-parser-japanese-web:0.6
     environment:
       - PRIVATE_IP_ADDRESS=toposoid-sentence-parser-japanese-web
       - PLAY_HTTP_PORT=9001
     ports:
       - 9001:9001
   toposoid-common-nlp-japanese-web:
-    image: toposoid/toposoid-common-nlp-japanese-web:0.6-SNAPSHOT-lowspec
+    image: toposoid/toposoid-common-nlp-japanese-web:0.6-lowspec
     environment:
       - PRIVATE_IP_ADDRESS=toposoid-common-nlp-japanese-web
       - TOPOSOID_SYNONYM_NOUN_SIMILARITY_THRESHHOLD_JP=0.52
@@ -138,7 +138,7 @@ services:
     ports:
       - 9006:9006
   toposoid-sentence-parser-english-web:
-    image: toposoid/toposoid-sentence-parser-english-web:0.6-SNAPSHOT-lowspec
+    image: toposoid/toposoid-sentence-parser-english-web:0.6-lowspec
     environment:
       - PRIVATE_IP_ADDRESS=toposoid-sentence-parser-english-web
       - PLAY_HTTP_PORT=9007
@@ -147,7 +147,7 @@ services:
     ports:
       - 9007:9007
   toposoid-common-nlp-english-web:
-    image: toposoid/toposoid-common-nlp-english-web:0.6-SNAPSHOT-lowspec
+    image: toposoid/toposoid-common-nlp-english-web:0.6-lowspec
     environment:
       - PRIVATE_IP_ADDRESS=toposoid-common-nlp-english-web
       - TOPOSOID_SYNONYM_NOUN_SIMILARITY_THRESHHOLD_EN=0.34
@@ -182,7 +182,7 @@ services:
       - NEO4J_AUTH=neo4j/p@ssw0rd
 
   data-accessor-sentence-weaviate-web:
-    image: toposoid/data-accessor-weaviate-web:0.6-SNAPSHOT
+    image: toposoid/data-accessor-weaviate-web:0.6
     environment:
       - TOPOSOID_WEAVIATE_HOST=sentence-weaviate
       - TOPOSOID_WEAVIATE_PORT=8080
