@@ -34,6 +34,7 @@ import javax.inject._
 import play.api._
 import play.api.libs.json.{Json, __}
 import play.api.mvc._
+import play.api.libs.json.JsValue
 
 import scala.util.{Failure, Success, Try}
 //case class FeatureVectorSearchInfo(propositionId:String, sentenceId:String, sentenceType:Int, lang:String, similarity:Float)
@@ -46,7 +47,7 @@ import scala.util.{Failure, Success, Try}
 @Singleton
 class HomeController @Inject()(val controllerComponents: ControllerComponents) extends BaseController with DeductionUnitControllerForSemiGlobal with LazyLogging {
 
-  def execute()  = Action(parse.json) { request =>
+  def execute():Action[JsValue] = Action(parse.json[JsValue])  { request =>
     val transversalState = Json.parse(request.headers.get(TRANSVERSAL_STATE .str).get).as[TransversalState]
     try {
       val json = request.body
