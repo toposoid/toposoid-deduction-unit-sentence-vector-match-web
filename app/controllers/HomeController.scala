@@ -18,7 +18,7 @@
 package controllers
 
 import com.ideal.linked.common.DeploymentConverter.conf
-import com.ideal.linked.toposoid.common.{CLAIM, LOCAL, PREDICATE_ARGUMENT, TRANSVERSAL_STATE, ToposoidUtils, TransversalState}
+import com.ideal.linked.toposoid.common.{TRANSVERSAL_STATE, ToposoidUtils, TransversalState}
 import com.ideal.linked.toposoid.deduction.common.FacadeForAccessNeo4J.{getAnalyzedSentenceObjectBySentenceId, getCypherQueryResult}
 import com.ideal.linked.toposoid.deduction.common.FacadeForAccessVectorDB.getMatchedSentenceFeature
 import com.ideal.linked.toposoid.deduction.common.{DeductionUnitController, DeductionUnitControllerForSemiGlobal, SentenceInfo}
