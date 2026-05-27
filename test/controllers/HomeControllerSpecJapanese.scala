@@ -328,7 +328,7 @@ class HomeControllerSpecJapanese extends PlaySpec with BeforeAndAfter with Befor
 
       val propositionId3 = java.util.UUID.randomUUID().toString
       val sentenceId3 = java.util.UUID.randomUUID().toString
-      val knowledge3 = Knowledge(sentence4,"ja_JP", "{}", false)
+      val knowledge3 = Knowledge(sentence3,"ja_JP", "{}", false)
 
       val propositionId4 = java.util.UUID.randomUUID().toString
       val sentenceId4 = java.util.UUID.randomUUID().toString
@@ -392,6 +392,90 @@ class HomeControllerSpecJapanese extends PlaySpec with BeforeAndAfter with Befor
     }
   }   
   //２対の前提と主張(部分一致)
+  "The specification6" should {
+    "returns an appropriate response" in {
+      val sentence1 = "自然界の法則がすべての慣性系で同じように成り立っている。"
+      val sentence2 = "どの慣性系から見ても光の速さは一定である。"
+      val sentence3 = "運動する物体の速さの上限は光の速さである。"
+      val sentence4 = "特殊相対性理論では運動する物体の時間は進みかたが遅くなる。"
 
+      val paraphrase1 = "自然界の物理法則は例外なくどの慣性系でも成立する。"
+      val paraphrase2 = "見ている慣性系によらず光速は一定ではない。"
+      val paraphrase3 = "物体の運動する速さは光の速さを超えない。"
+      val paraphrase4 = "一般相対性理論において等価原理は大事だ。"
+
+      val propositionId1 = java.util.UUID.randomUUID().toString
+      val sentenceId1 = java.util.UUID.randomUUID().toString
+      val knowledge1 = Knowledge(sentence1,"ja_JP", "{}", false)
+
+      val propositionId2 = java.util.UUID.randomUUID().toString
+      val sentenceId2 = java.util.UUID.randomUUID().toString
+      val knowledge2 = Knowledge(sentence2,"ja_JP", "{}", false)
+
+      val propositionId3 = java.util.UUID.randomUUID().toString
+      val sentenceId3 = java.util.UUID.randomUUID().toString
+      val knowledge3 = Knowledge(sentence3,"ja_JP", "{}", false)
+
+      val propositionId4 = java.util.UUID.randomUUID().toString
+      val sentenceId4 = java.util.UUID.randomUUID().toString
+      val knowledge4 = Knowledge(sentence4,"ja_JP", "{}", false)
+          
+      val paraphraseKnowledge1 = Knowledge(paraphrase1,"ja_JP", "{}", false)
+      val paraphraseKnowledge2 = Knowledge(paraphrase2,"ja_JP", "{}", false)
+      val paraphraseKnowledge3 = Knowledge(paraphrase3,"ja_JP", "{}", false)
+      val paraphraseKnowledge4 = Knowledge(paraphrase4,"ja_JP", "{}", false)
+
+      TestUtilsEx.registerSingleClaim(KnowledgeForParser(propositionId1, sentenceId1, knowledge1), transversalState)
+      TestUtilsEx.registerSingleClaim(KnowledgeForParser(propositionId2, sentenceId2, knowledge2), transversalState)
+      TestUtilsEx.registerSingleClaim(KnowledgeForParser(propositionId3, sentenceId3, knowledge3), transversalState)
+      TestUtilsEx.registerSingleClaim(KnowledgeForParser(propositionId4, sentenceId4, knowledge4), transversalState)
+
+      val propositionIdForInference = java.util.UUID.randomUUID().toString
+      val sentenceIdForInference1 = java.util.UUID.randomUUID().toString      
+      val sentenceIdForInference2 = java.util.UUID.randomUUID().toString
+      val sentenceIdForInference3 = java.util.UUID.randomUUID().toString      
+      val sentenceIdForInference4 = java.util.UUID.randomUUID().toString
+
+      val premiseKnowledge = List(KnowledgeForParser(propositionIdForInference, sentenceIdForInference1, paraphraseKnowledge1), KnowledgeForParser(propositionIdForInference, sentenceIdForInference2, paraphraseKnowledge2))
+      val claimKnowledge = List(KnowledgeForParser(propositionIdForInference, sentenceIdForInference3, paraphraseKnowledge3), KnowledgeForParser(propositionIdForInference, sentenceIdForInference4, paraphraseKnowledge4))
+
+      val inputSentence = Json.toJson(InputSentenceForParser(premiseKnowledge, claimKnowledge, ActionModeType.DEDUCTION_MODE.index)).toString()
+      val json = ToposoidUtils.callComponent(inputSentence, conf.getString("TOPOSOID_SENTENCE_PARSER_JP_WEB_HOST"), conf.getString("TOPOSOID_SENTENCE_PARSER_JP_WEB_PORT"), "analyze", transversalState)      
+      val fr = FakeRequest(POST, "/execute")
+        .withHeaders("Content-type" -> "application/json", TRANSVERSAL_STATE.str -> transversalStateJson)
+        .withJsonBody(Json.parse(json))
+      val result = call(controller.execute(), fr)
+      status(result) mustBe OK
+      contentType(result) mustBe Some("application/json")
+      val jsonResult: String = contentAsJson(result).toString()
+
+      val aso:AnalyzedSentenceObjects = Json.parse(json).as[AnalyzedSentenceObjects]
+      val verifyingEdgesList: List[VerifyingEdges] = Json.parse(jsonResult).as[List[VerifyingEdges]]
+
+      val correctSizes = aso.analyzedSentenceObjects.map(_.edgeList.size)
+      assert(verifyingEdgesList.map(x => x.coveredPropositionEdges.size).sum == correctSizes(0) + correctSizes(2))
+
+      TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(0))
+      TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
+      TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+
+      TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+      TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
+      TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+
+      TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(2))
+      TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
+      TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+
+      TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+      TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
+      TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId3, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId4, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
+    }
+  } 
 
 }
