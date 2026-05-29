@@ -67,7 +67,7 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
           )
         }
       }
-      logger.info(ToposoidUtils.formatMessageForLogger("Basic edge analysis completed.", transversalState.userId))      
+      logger.info(ToposoidUtils.formatMessageForLogger("Embedded Sentence analysis completed.", transversalState.userId))      
       Ok(Json.toJson(result)).as(JSON)      
     }catch {
       case e: Exception => {
@@ -78,102 +78,7 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
   }
 
   private def analyzeGraphKnowledgeForSemiGlobal(aso: AnalyzedSentenceObject, transversalState:TransversalState): List[CoveredPropositionEdge] = {
-    getMatchedSentenceFeature(aso ,
-      transversalState)
-  }
-
-  private def getMatchedSentenceFeature(aso:AnalyzedSentenceObject, transversalState:TransversalState): List[CoveredPropositionEdge] = {
-
-    val originalSentenceId = aso.knowledgeBaseSemiGlobalNode.sentenceId
-    val originalSentenceType = aso.knowledgeBaseSemiGlobalNode.sentenceType
-    val sentence = aso.knowledgeBaseSemiGlobalNode.sentence
-    val lang = aso.knowledgeBaseSemiGlobalNode.localContextForFeature.lang
-
-    val vector = FeatureVectorizer.getSentenceVector(Knowledge(sentence, lang, "{}"), transversalState)
-    val json: String = Json.toJson(SingleFeatureVectorForSearch(vector = vector.vector, num = conf.getString("TOPOSOID_SENTENCE_VECTORDB_SEARCH_NUM_MAX").toInt)).toString()
-    val featureVectorSearchResultJson: String = ToposoidUtils.callComponent(json, conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_HOST"), conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_PORT"), "search", transversalState)
-    val result = Json.parse(featureVectorSearchResultJson).as[FeatureVectorSearchResult]
-
-    //VecotrDBにClaimとして存在している場合に推論が可能になる
-    val (ids, similarities) = (result.ids zip result.similarities).foldLeft((List.empty[FeatureVectorIdentifier], List.empty[Float])) {
-      (acc, x) => {
-        x._1.sentenceType match {
-          case SentenceType.CLAIM.index => (acc._1 :+ x._1, acc._2 :+ x._2)
-          case _ => acc
-        }
-      }
-    }
-
-    val filteredResult = FeatureVectorSearchResult(ids, similarities, result.statusInfo) 
-    val deductionUnitName = conf.getString("TOPOSOID_DEDUCTION_UNIT_NAME")
-    filteredResult.ids.size match {
-      case 0 => List.empty[CoveredPropositionEdge]
-      case _ => {        
-        val featureVectorSearchInfoList = extractExistInNeo4JResultForSentence(filteredResult, originalSentenceType, transversalState)        
-        val matchedKnowledgeNodes = featureVectorSearchInfoList.map(x => {
-          MatchedKnowledgeNode(
-            propositionId = x.propositionId,
-            sentenceId = x.sentenceId,
-            nodeId = "",
-            caseNameOnEdge = "",
-            isDenialWord = false,
-            nodeType = x.sentenceType,
-            featureInfo = MatchedFeatureInfo(featureId = x.featureId, similarity = x.similarity)
-          )          
-        })
-
-        aso.edgeList.map(x => {
-          val sourceNode = aso.nodeMap.get(x.sourceId).get.asInstanceOf[KnowledgeBaseNode]
-          val destinationNode = aso.nodeMap.get(x.destinationId).get.asInstanceOf[KnowledgeBaseNode]
-          val sourceCoveredPropositionNode = CoveredPropositionNode(
-            terminalId = sourceNode.nodeId,
-            terminalSurface = sourceNode.predicateArgumentStructure.surface,
-            terminalUrl = "",
-            matchedKnowledgeNodes = matchedKnowledgeNodes,
-            isConfirmed = true,
-            deductionUnit = deductionUnitName
-          )
-
-          val destinationCoveredPropositionNode = CoveredPropositionNode(
-            terminalId = destinationNode.nodeId,
-            terminalSurface = destinationNode.predicateArgumentStructure.surface,
-            terminalUrl = "",
-            matchedKnowledgeNodes = matchedKnowledgeNodes,
-            isConfirmed = true,
-            deductionUnit = deductionUnitName
-          )
-          CoveredPropositionEdge(sourceCoveredPropositionNode, destinationCoveredPropositionNode)
-        }) 
-      }
-    }    
-        
-  }
-
-  private def extractExistInNeo4JResultForSentence(featureVectorSearchResult: FeatureVectorSearchResult, originalSentenceType: Int, transversalState:TransversalState): List[FeatureVectorSearchInfo] = {
-
-    val neo4jUtils = Neo4JUtilsImpl()
-    (featureVectorSearchResult.ids zip featureVectorSearchResult.similarities).foldLeft(List.empty[FeatureVectorSearchInfo]) {
-      (acc, x) => {
-        val idInfo = x._1
-        val propositionId = idInfo.superiorId
-        val lang = idInfo.lang
-        val featureId = idInfo.featureId
-        val similarity = x._2
-        val nodeType: String = ToposoidUtils.getNodeType(idInfo.sentenceType, ScopeType.SEMIGLOBAL.index, FeatureType.SENTENCE.index)
-        //Check whether featureVectorSearchResult information exists in Neo4J
-        val query = "MATCH (n:%s) WHERE n.propositionId='%s' AND n.sentenceId='%s' RETURN n".format(nodeType, propositionId, featureId)
-        val jsonStr: String = neo4jUtils.getCypherQueryResult(query, "", transversalState)
-        val neo4jRecords: Neo4jRecords = Json.parse(jsonStr).as[Neo4jRecords]
-        neo4jRecords.records.size match {
-          case 0 => acc
-          case _ => {
-            val idInfoOnNeo4jSide = neo4jRecords.records.head.head.value.semiGlobalNode.get
-            //sentenceType returns the originalSentenceType of the argument
-            acc :+ FeatureVectorSearchInfo(idInfoOnNeo4jSide.propositionId, idInfoOnNeo4jSide.sentenceId, originalSentenceType, lang, featureId, similarity)
-          }
-        }
-      }
-    }
+    FeatureVectorizer.getMatchedSentenceFeature(aso ,transversalState)
   }
 
 }
