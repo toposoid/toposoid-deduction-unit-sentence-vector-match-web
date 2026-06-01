@@ -42,6 +42,7 @@ import com.ideal.linked.toposoid.common.FeatureType
 import com.ideal.linked.toposoid.common.Neo4JUtilsImpl
 import com.ideal.linked.toposoid.protocol.model.base.DeductionResult
 import com.ideal.linked.toposoid.protocol.model.base.MatchedKnowledgeNode
+import com.ideal.linked.toposoid.common.DeductionUtilsForSemiGlobal
 case class FeatureVectorSearchInfo(propositionId:String, sentenceId:String, sentenceType:Int, lang:String, featureId:String, similarity:Float)
 
 /**
@@ -78,7 +79,17 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
   }
 
   private def analyzeGraphKnowledgeForSemiGlobal(aso: AnalyzedSentenceObject, transversalState:TransversalState): List[CoveredPropositionEdge] = {
-    FeatureVectorizer.getMatchedSentenceFeature(aso ,transversalState)
+    
+    val knowledgeFeatureReferences = aso.knowledgeBaseSemiGlobalNode.localContextForFeature.knowledgeFeatureReferences
+    val isConfirmed = knowledgeFeatureReferences.filter(x => List(FeatureType.IMAGE.index, FeatureType.TABLE.index).contains(x.featureType)).size match {
+      case 0 => true
+      case _ => false
+    }     
+    val sentence = aso.knowledgeBaseSemiGlobalNode.sentence
+    val lang = aso.knowledgeBaseSemiGlobalNode.localContextForFeature.lang
+    val featureVectorSearchResult = FeatureVectorizer.getFeatureVectorSearchResult(FeatureType.SENTENCE, sentence, lang, "",  transversalState)    
+    DeductionUtilsForSemiGlobal.getCoveredPropositionEdges(isConfirmed, aso, featureVectorSearchResult,  transversalState)
+    
   }
 
 }
