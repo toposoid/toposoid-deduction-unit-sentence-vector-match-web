@@ -60,19 +60,13 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
       val asos: List[AnalyzedSentenceObject] = analyzedSentenceObjects.analyzedSentenceObjects
 
       val result:List[VerifyingEdges] = asos.foldLeft(List.empty[VerifyingEdges]){
-        (acc, aso) => {    
-          val coveredPropositionEdges = analyzeGraphKnowledgeForSemiGlobal(aso, transversalState)
-          coveredPropositionEdges.size match {
-            case 0 => acc
-            case _ => {
+        (acc, aso) => {              
               acc :+ VerifyingEdges(            
                 propositionId = aso.knowledgeBaseSemiGlobalNode.propositionId,
                 sentenceId = aso.knowledgeBaseSemiGlobalNode.sentenceId,
-                coveredPropositionEdges = coveredPropositionEdges
+                coveredPropositionEdges = analyzeGraphKnowledgeForSemiGlobal(aso, transversalState)
               )
-            }
-          }
-        }
+          }          
       }
       logger.info(ToposoidUtils.formatMessageForLogger("Embedded Sentence analysis completed.", transversalState.userId))      
       Ok(Json.toJson(result)).as(JSON)      
