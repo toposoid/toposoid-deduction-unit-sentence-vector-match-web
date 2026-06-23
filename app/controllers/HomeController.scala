@@ -88,7 +88,7 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     val sentence = aso.knowledgeBaseSemiGlobalNode.sentence
     val lang = aso.knowledgeBaseSemiGlobalNode.localContextForFeature.lang
     val featureVectorSearchResult = FeatureVectorizer.getFeatureVectorSearchResult(FeatureType.SENTENCE, sentence, lang, "",  transversalState)    
-    DeductionUtilsForSemiGlobal.getCoveredPropositionEdges(isConfirmed, aso, featureVectorSearchResult,  FeatureType.IMAGE, transversalState)
+    DeductionUtilsForSemiGlobal.getCoveredPropositionEdges(isConfirmed, aso, featureVectorSearchResult,  FeatureType.SENTENCE, transversalState)
     
   }
 
