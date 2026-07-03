@@ -63,17 +63,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: toposoid/${{ env.PJ_REPO }}:${{ env.PJ_VERSION }}
+          tags: toposoid/${{ env.PJ_REPO }}:${{ env.PJ_VERSION }}-amd64
           build-args: |
             TARGET_BRANCH=${{ env.PJ_BRANCH }}
-            JAVA_OPT_XMX=4g
-      - name: Build And Push Docker Image For Test
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          tags: toposoid/${{ env.PJ_REPO }}:${{ env.PJ_VERSION }}-lowspec
-          build-args: |
-            TARGET_BRANCH=${{ env.PJ_BRANCH }}
-            JAVA_OPT_XMX=2g
