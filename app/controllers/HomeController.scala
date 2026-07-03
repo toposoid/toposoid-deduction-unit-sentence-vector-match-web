@@ -19,9 +19,6 @@ package controllers
 
 import com.ideal.linked.common.DeploymentConverter.conf
 import com.ideal.linked.toposoid.common.{TRANSVERSAL_STATE, ToposoidUtils, TransversalState}
-import com.ideal.linked.toposoid.deduction.common.FacadeForAccessNeo4J.{getAnalyzedSentenceObjectBySentenceId, getCypherQueryResult}
-import com.ideal.linked.toposoid.deduction.common.FacadeForAccessVectorDB.getMatchedSentenceFeature
-import com.ideal.linked.toposoid.deduction.common.{DeductionUnitController, DeductionUnitControllerForSemiGlobal, SentenceInfo}
 import com.ideal.linked.toposoid.knowledgebase.featurevector.model.{FeatureVectorIdentifier, FeatureVectorSearchResult, SingleFeatureVectorForSearch}
 import com.ideal.linked.toposoid.knowledgebase.model.{KnowledgeBaseEdge, KnowledgeBaseNode}
 import com.ideal.linked.toposoid.knowledgebase.regist.model.Knowledge
@@ -37,15 +34,23 @@ import play.api.mvc._
 import play.api.libs.json.JsValue
 
 import scala.util.{Failure, Success, Try}
-//case class FeatureVectorSearchInfo(propositionId:String, sentenceId:String, sentenceType:Int, lang:String, similarity:Float)
-//case class SentenceId2FeatureVectorSearchResult(originalSentenceId:String, featureVectorSearchInfo:FeatureVectorSearchInfo)
+import com.ideal.linked.toposoid.protocol.model.base.VerifyingEdges
+import com.ideal.linked.toposoid.common.SentenceType
+import com.ideal.linked.toposoid.common.DeductionUtils
+import com.ideal.linked.toposoid.common.ScopeType
+import com.ideal.linked.toposoid.common.FeatureType
+import com.ideal.linked.toposoid.common.Neo4JUtilsImpl
+import com.ideal.linked.toposoid.protocol.model.base.DeductionResult
+import com.ideal.linked.toposoid.protocol.model.base.MatchedKnowledgeNode
+import com.ideal.linked.toposoid.common.DeductionUtilsForSemiGlobal
+case class FeatureVectorSearchInfo(propositionId:String, sentenceId:String, sentenceType:Int, lang:String, featureId:String, similarity:Float)
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.
  */
 @Singleton
-class HomeController @Inject()(val controllerComponents: ControllerComponents) extends BaseController with DeductionUnitControllerForSemiGlobal with LazyLogging {
+class HomeController @Inject()(val controllerComponents: ControllerComponents) extends BaseController /*with DeductionUnitControllerForSemiGlobal*/ with LazyLogging {
 
   def execute():Action[JsValue] = Action(parse.json[JsValue])  { request =>
     val transversalState = Json.parse(request.headers.get(TRANSVERSAL_STATE .str).get).as[TransversalState]
@@ -53,11 +58,18 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
       val json = request.body
       val analyzedSentenceObjects: AnalyzedSentenceObjects = Json.parse(json.toString).as[AnalyzedSentenceObjects]
       val asos: List[AnalyzedSentenceObject] = analyzedSentenceObjects.analyzedSentenceObjects
-      val result: List[AnalyzedSentenceObject] = asos.foldLeft(List.empty[AnalyzedSentenceObject]) {
-        (acc, x) => acc :+ analyze(x, acc, "sentence-feature-match", List.empty[Int], transversalState)
+
+      val result:List[VerifyingEdges] = asos.foldLeft(List.empty[VerifyingEdges]){
+        (acc, aso) => {              
+              acc :+ VerifyingEdges(            
+                propositionId = aso.knowledgeBaseSemiGlobalNode.propositionId,
+                sentenceId = aso.knowledgeBaseSemiGlobalNode.sentenceId,
+                coveredPropositionEdges = analyzeGraphKnowledgeForSemiGlobal(aso, transversalState)
+              )
+          }          
       }
-      logger.info(ToposoidUtils.formatMessageForLogger("deduction completed.", transversalState.userId))
-      Ok(Json.toJson(AnalyzedSentenceObjects(result))).as(JSON)
+      logger.info(ToposoidUtils.formatMessageForLogger("Embedded Sentence analysis completed.", transversalState.userId))      
+      Ok(Json.toJson(result)).as(JSON)      
     }catch {
       case e: Exception => {
         logger.error(ToposoidUtils.formatMessageForLogger(e.toString, transversalState.userId), e)
@@ -66,12 +78,18 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
     }
   }
 
-  def analyzeGraphKnowledgeForSemiGlobal(aso: AnalyzedSentenceObject, transversalState:TransversalState): List[KnowledgeBaseSideInfo] = {
-    getMatchedSentenceFeature(aso.knowledgeBaseSemiGlobalNode.sentenceId,
-      aso.knowledgeBaseSemiGlobalNode.sentenceType,
-      aso.knowledgeBaseSemiGlobalNode.sentence,
-      aso.knowledgeBaseSemiGlobalNode.localContextForFeature.lang,
-      transversalState)
+  private def analyzeGraphKnowledgeForSemiGlobal(aso: AnalyzedSentenceObject, transversalState:TransversalState): List[CoveredPropositionEdge] = {
+    
+    val knowledgeFeatureReferences = aso.knowledgeBaseSemiGlobalNode.localContextForFeature.knowledgeFeatureReferences
+    val isConfirmed = knowledgeFeatureReferences.filter(x => List(FeatureType.IMAGE.index, FeatureType.TABLE.index).contains(x.featureType)).size match {
+      case 0 => true
+      case _ => false
+    }     
+    val sentence = aso.knowledgeBaseSemiGlobalNode.sentence
+    val lang = aso.knowledgeBaseSemiGlobalNode.localContextForFeature.lang
+    val featureVectorSearchResult = FeatureVectorizer.getFeatureVectorSearchResult(FeatureType.SENTENCE, sentence, lang, "",  transversalState)    
+    DeductionUtilsForSemiGlobal.getCoveredPropositionEdges(isConfirmed, aso, featureVectorSearchResult,  FeatureType.SENTENCE, transversalState)
+    
   }
 
 }

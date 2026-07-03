@@ -17,9 +17,29 @@ services:
     ports:
       - 9103:9103
     depends_on:
-      - neo4j
+      - data-accessor-neo4j-web
       - toposoid-common-nlp-japanese-web
       - toposoid-common-nlp-english-web
+      - data-accessor-sentence-weaviate-web
+
+  neo4j:
+    image: neo4j:4.4.23
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=2G
+      - NEO4J_dbms_transaction_timeout=10s
+      - NEO4J_apoc_uuid_enabled=true
+      - NEO4J_dbms_default__listen__address=0.0.0.0
+      - NEO4J_dbms_allow__upgrade=true
+      - NEO4J_dbms_default__database=neo4j
+      - NEO4J_AUTH=neo4j/p@ssw0rd
+
   data-accessor-neo4j-web:
     image: toposoid/data-accessor-neo4j-web:0.7-SNAPSHOT
     environment:
@@ -28,6 +48,76 @@ services:
       - PLAY_HTTP_PORT=9005
     ports:
       - 9005:9005
+    depends_on:
+      - neo4j
+
+  data-accessor-sentence-weaviate-web:
+    image: toposoid/data-accessor-weaviate-web:0.7-SNAPSHOT
+    environment:
+      - TOPOSOID_WEAVIATE_HOST=sentence-weaviate
+      - TOPOSOID_WEAVIATE_PORT=8080
+      - TOPOSOID_WEAVIATE_SIMILARITY_THRESHOLD=0.85
+      - TOPOSOID_DATA_ACCESSOR_PORT=9011
+    ports:
+      - 9020:9011
+    depends_on:
+      - sentence-weaviate
+
+  sentence-weaviate:
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      - --scheme
+      - http
+    image: cr.weaviate.io/semitechnologies/weaviate:1.26.3
+    ports:
+      - 8080:8080
+    #volumes:
+    #  - /var/weaviate:/var/lib/weaviate
+    restart: on-failure:0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'text2vec-huggingface'
+      HUGGINGFACE_APIKEY: ''
+      ENABLE_MODULES: 'text2vec-cohere,text2vec-huggingface,text2vec-palm,text2vec-openai,generative-openai,generative-cohere,generative-palm,ref2vec-centroid,reranker-cohere,qna-openai'
+      CLUSTER_HOSTNAME: 'node1'
+
+  toposoid-common-nlp-english-web:
+    image: toposoid/toposoid-common-nlp-english-web:0.7-SNAPSHOT-lowspec
+    environment:
+      - PRIVATE_IP_ADDRESS=toposoid-common-nlp-english-web
+      - TOPOSOID_SYNONYM_NOUN_SIMILARITY_THRESHHOLD_EN=0.34
+      - TOPOSOID_SYNONYM_VERB_SIMILARITY_THRESHHOLD_EN=0.52
+      - TOPOSOID_WORD2VEC_SIMILARITY_THRESHHOLD_EN=0.78
+      - TOPOSOID_SPACY_MODEL_EN=en_core_web_md
+      - TOPOSOID_SENTENCEBERT_MODEL_EN=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+      - TOPOSOID_SENTENCE_TRANSFORMERS_HOME=./models
+      - PLAY_HTTP_PORT=9008
+    ports:
+      - 9008:9008
+
+  toposoid-common-nlp-japanese-web:
+    image: toposoid/toposoid-common-nlp-japanese-web:0.7-SNAPSHOT-lowspec
+    environment:
+      - PRIVATE_IP_ADDRESS=toposoid-common-nlp-japanese-web
+      - TOPOSOID_SYNONYM_NOUN_SIMILARITY_THRESHHOLD_JP=0.52
+      - TOPOSOID_SYNONYM_VERB_SIMILARITY_THRESHHOLD_JP=0.52
+      - TOPOSOID_WORD2VEC_SIMILARITY_THRESHHOLD_JP=0.68
+      - TOPOSOID_CHIVE_MODEL_VERSION=chive-1.2-mc90.kv
+      - TOPOSOID_SENTENCEBERT_MODEL_JP=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+      - SENTENCE_TRANSFORMERS_HOME=./models
+      - PLAY_HTTP_PORT=9006
+    ports:
+      - 9006:9006
+
+  #------------------------------------------------------------------------------------------------
+  #For Minimal use on Standalone
+  #------------------------------------------------------------------------------------------------
+
   toposoid-knowledge-register-web:
     image: toposoid/toposoid-knowledge-register-web:0.7-SNAPSHOT
     environment:
@@ -52,6 +142,9 @@ services:
       - PLAY_HTTP_PORT=9002
     ports:
       - 9002:9002
+    depends_on:
+      - toposoid-knowledge-register-subscriber
+      - toposoid-language-detector-web
 
   toposoid-knowledge-register-subscriber:
     image: toposoid/toposoid-knowledge-register-subscriber:0.7-SNAPSHOT
@@ -84,6 +177,15 @@ services:
       - TOPOSOID_MQ_KNOWLEDGE_REGISTER_QUENE=toposoid-knowledge-register-queue.fifo
       - TOPOSOID_MQ_ACCESS_KEY=__##YOUR_AWS_ACCESS_KEY##__
       - TOPOSOID_MQ_SECRET_KEY=__##YOUR_AWS_SECRET_KEY##__
+    depends_on:
+      - elasticmq
+      - data-accessor-mysql-web      
+      - data-accessor-neo4j-web
+      - toposoid-sentence-parser-japanese-web
+      - toposoid-common-nlp-japanese-web
+      - toposoid-sentence-parser-english-web
+      - toposoid-common-nlp-english-web  
+      - data-accessor-sentence-weaviate-web
 
   elasticmq:
     image: toposoid/toposoid-elasticmq:0.7-SNAPSHOT
@@ -124,19 +226,7 @@ services:
       - PLAY_HTTP_PORT=9001
     ports:
       - 9001:9001
-  toposoid-common-nlp-japanese-web:
-    image: toposoid/toposoid-common-nlp-japanese-web:0.7-SNAPSHOT-lowspec
-    environment:
-      - PRIVATE_IP_ADDRESS=toposoid-common-nlp-japanese-web
-      - TOPOSOID_SYNONYM_NOUN_SIMILARITY_THRESHHOLD_JP=0.52
-      - TOPOSOID_SYNONYM_VERB_SIMILARITY_THRESHHOLD_JP=0.52
-      - TOPOSOID_WORD2VEC_SIMILARITY_THRESHHOLD_JP=0.68
-      - TOPOSOID_CHIVE_MODEL_VERSION=chive-1.2-mc90.kv
-      - TOPOSOID_SENTENCEBERT_MODEL_JP=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-      - SENTENCE_TRANSFORMERS_HOME=./models
-      - PLAY_HTTP_PORT=9006
-    ports:
-      - 9006:9006
+
   toposoid-sentence-parser-english-web:
     image: toposoid/toposoid-sentence-parser-english-web:0.7-SNAPSHOT-lowspec
     environment:
@@ -146,75 +236,19 @@ services:
       - TOPOSOID_PARSER_SPACY_MODEL_EN=en_core_web_md
     ports:
       - 9007:9007
-  toposoid-common-nlp-english-web:
-    image: toposoid/toposoid-common-nlp-english-web:0.7-SNAPSHOT-lowspec
-    environment:
-      - PRIVATE_IP_ADDRESS=toposoid-common-nlp-english-web
-      - TOPOSOID_SYNONYM_NOUN_SIMILARITY_THRESHHOLD_EN=0.34
-      - TOPOSOID_SYNONYM_VERB_SIMILARITY_THRESHHOLD_EN=0.52
-      - TOPOSOID_WORD2VEC_SIMILARITY_THRESHHOLD_EN=0.78
-      - TOPOSOID_SPACY_MODEL_EN=en_core_web_md
-      - TOPOSOID_SENTENCEBERT_MODEL_EN=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-      - TOPOSOID_SENTENCE_TRANSFORMERS_HOME=./models
-      - PLAY_HTTP_PORT=9008
-    ports:
-      - 9008:9008
+    depends_on:
+      - corenlp
+  
   corenlp:
-    image: toposoid/corenlp:3.4.2-lowspec
+    image: toposoid/corenlp:3.4.2
     ports:
       - 9000:9000
-  neo4j:
-    image: neo4j:4.4.23
-    ports:
-      - "7474:7474"
-      - "7687:7687"
     environment:
-      - NEO4J_apoc_export_file_enabled=true
-      - NEO4J_apoc_import_file_enabled=true
-      - NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*
-      - NEO4J_dbms_memory_heap_initial__size=512m
-      - NEO4J_dbms_memory_heap_max__size=2G
-      - NEO4J_dbms_transaction_timeout=10s
-      - NEO4J_apoc_uuid_enabled=true
-      - NEO4J_dbms_default__listen__address=0.0.0.0
-      - NEO4J_dbms_allow__upgrade=true
-      - NEO4J_dbms_default__database=neo4j
-      - NEO4J_AUTH=neo4j/p@ssw0rd
+      - TOPOSOID_JVM_XMS=512m
+      - TOPOSOID_JVM_XMX=2g
+      - TOPOSOID_JVM_XSS=512k          
 
-  data-accessor-sentence-weaviate-web:
-    image: toposoid/data-accessor-weaviate-web:0.7-SNAPSHOT
-    environment:
-      - TOPOSOID_WEAVIATE_HOST=sentence-weaviate
-      - TOPOSOID_WEAVIATE_PORT=8080
-      - TOPOSOID_WEAVIATE_SIMILARITY_THRESHOLD=0.85
-      - TOPOSOID_DATA_ACCESSOR_PORT=9011
+  toposoid-language-detector-web:
+    image: toposoid/toposoid-language-detector-web:0.7-SNAPSHOT
     ports:
-      - 9020:9011
-    depends_on:
-      - sentence-weaviate
-  sentence-weaviate:
-    command:
-      - --host
-      - 0.0.0.0
-      - --port
-      - '8080'
-      - --scheme
-      - http
-    image: cr.weaviate.io/semitechnologies/weaviate:1.26.3
-    ports:
-      - 8080:8080
-    #volumes:
-    #  - /var/weaviate:/var/lib/weaviate
-    restart: on-failure:0
-    environment:
-      QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      DEFAULT_VECTORIZER_MODULE: 'text2vec-huggingface'
-      HUGGINGFACE_APIKEY: ''
-      ENABLE_MODULES: 'text2vec-cohere,text2vec-huggingface,text2vec-palm,text2vec-openai,generative-openai,generative-cohere,generative-palm,ref2vec-centroid,reranker-cohere,qna-openai'
-      CLUSTER_HOSTNAME: 'node1'
-
-
-
-
+      - 9017:9017
