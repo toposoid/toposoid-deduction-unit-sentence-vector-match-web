@@ -168,6 +168,7 @@ services:
       - 9020:9011
     depends_on:
       - sentence-weaviate
+      
   sentence-weaviate:
     command:
       - --host
