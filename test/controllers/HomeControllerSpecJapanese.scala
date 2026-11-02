@@ -545,18 +545,22 @@ class HomeControllerSpecJapanese extends PlaySpec with BeforeAndAfter with Befor
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(0))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(1))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(2))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(3))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)
+      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
 
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
@@ -626,8 +630,12 @@ class HomeControllerSpecJapanese extends PlaySpec with BeforeAndAfter with Befor
 
       val aso:AnalyzedSentenceObjects = Json.parse(json).as[AnalyzedSentenceObjects]
       val verifyingEdgesList: List[VerifyingEdges] = Json.parse(jsonResult).as[List[VerifyingEdges]]
+      
+      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
+      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
+      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
+      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
 
-      assert(verifyingEdgesList.map(x => x.coveredPropositionEdges.map(y => y.sourceNode.matchedKnowledgeNodes.size + y.destinationNode.matchedKnowledgeNodes.size).sum).sum == 0)
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId3, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
