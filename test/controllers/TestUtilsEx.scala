@@ -25,6 +25,7 @@ import com.ideal.linked.toposoid.protocol.model.neo4j.Neo4jRecords
 import com.ideal.linked.toposoid.protocol.model.parser.{KnowledgeForParser, KnowledgeSentenceSetForParser}
 import com.ideal.linked.toposoid.test.utils.TestUtils
 import play.api.libs.json.Json
+import com.ideal.linked.toposoid.protocol.model.base.VerifyingEdges
 
 object TestUtilsEx {
   val neo4JUtils = new Neo4JUtilsImpl()
@@ -52,4 +53,16 @@ object TestUtilsEx {
     ToposoidUtils.callComponent(json, conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_HOST"), conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_PORT"), "delete", transversalState)
   }
 
+  def isPosiNegaMatch(sentenceId:String, verifyingEdgesList:List[VerifyingEdges], isCorrectNegativeMeaning:Boolean): Unit = {
+
+    val targetverifyingEdges = verifyingEdgesList.filter(x => x.sentenceId.equals(sentenceId))
+    val result = targetverifyingEdges.foldLeft(true)((acc, x) => {
+      x.coveredPropositionEdges.foldLeft(acc)((acc2, y) => {
+        acc2 & (y.sourceNode.matchedKnowledgeNodes ::: y.destinationNode.matchedKnowledgeNodes).foldLeft(acc2)((acc3, z) => {
+          acc3 & z.isNegativeMeaning 
+        })
+      })
+    })
+    assert(result == isCorrectNegativeMeaning)
+  }
 }
