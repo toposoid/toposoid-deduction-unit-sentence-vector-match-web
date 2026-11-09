@@ -546,22 +546,27 @@ class HomeControllerSpecEnglish extends PlaySpec with BeforeAndAfter with Before
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(0))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
+      val result1 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList)
+      assert(result1 == false)
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(1))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
+      val result2 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList)
+      assert(result2 == false)
+      
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(2))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=0)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
+      val result3 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList)
+      assert(result3 == false)
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(3))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
+      val result4 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList)
+      assert(result4 == false)
 
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = SentenceType.CLAIM.index, lang = "en_US", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = SentenceType.CLAIM.index, lang = "en_US", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
@@ -574,14 +579,14 @@ class HomeControllerSpecEnglish extends PlaySpec with BeforeAndAfter with Before
   "The specification8" should {
     "returns an appropriate response" in {
       val sentence1 = "On a cold winter day, The victim was not lying face down."      
-      val sentence2 = "Upon looking around the entire room, Bloody words were not written on the floor."
+      val sentence2 = "Looking around the entire room, A bloody message was not written on the floor."
       val sentence3 = "This must not be a murder made to look like an accident."
-      val sentence4 = "The culprit isn't among us."
+      val sentence4 = "Based on my many years of experience, the culprit of this incident is not likely among us."
 
       val paraphrase1 = "On a cold winter day, The victim was lying on his stomach."
-      val paraphrase2 = "Upon looking around the entire room, A dying message in blood written on the floor."
-      val paraphrase3 = "This must be a murder made to look like an accident."
-      val paraphrase4 = "The culprit is among us."
+      val paraphrase2 = "Looking around the entire room, A dying message was written on the floor."
+      val paraphrase3 = "This must be a murder made to look like an incident."
+      val paraphrase4 = "Based on my many years of experience, the perpetrator of this incident is likely among us."
 
       val propositionId1 = java.util.UUID.randomUUID().toString
       val sentenceId1 = java.util.UUID.randomUUID().toString
@@ -631,15 +636,21 @@ class HomeControllerSpecEnglish extends PlaySpec with BeforeAndAfter with Before
       val aso:AnalyzedSentenceObjects = Json.parse(json).as[AnalyzedSentenceObjects]
       val verifyingEdgesList: List[VerifyingEdges] = Json.parse(jsonResult).as[List[VerifyingEdges]]
 
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
+      
+      val result1 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList)
+      val result2 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList)
+      val result3 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList)
+      val result4 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList)
+
+      assert(result1 == true)
+      assert(result2 == true)
+      assert(result3 == true)
+      assert(result4 == true)
 
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = SentenceType.CLAIM.index, lang = "en_US", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = SentenceType.CLAIM.index, lang = "en_US", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
-      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId3, sentenceType = SentenceType.CLAIM.index, lang = "en_US", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
-      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId4, sentenceType = SentenceType.CLAIM.index, lang = "en_US", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId3, featureId = sentenceId3, sentenceType = SentenceType.CLAIM.index, lang = "en_US", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
+      deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId4, featureId = sentenceId4, sentenceType = SentenceType.CLAIM.index, lang = "en_US", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
 
     }
   } 

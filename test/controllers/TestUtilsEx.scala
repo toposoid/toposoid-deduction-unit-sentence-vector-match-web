@@ -53,10 +53,10 @@ object TestUtilsEx {
     ToposoidUtils.callComponent(json, conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_HOST"), conf.getString("TOPOSOID_SENTENCE_VECTORDB_ACCESSOR_PORT"), "delete", transversalState)
   }
 
-  def isPosiNegaMatch(sentenceId:String, verifyingEdgesList:List[VerifyingEdges], isCorrectNegativeMeaning:Boolean): Unit = {
+  def isPosiNegaMatch(sentenceId:String, verifyingEdgesList:List[VerifyingEdges]): Boolean = {
 
     val targetverifyingEdges = verifyingEdgesList.filter(x => x.sentenceId.equals(sentenceId))        
-    val result = targetverifyingEdges.foldLeft(true)((acc, x) => {
+    targetverifyingEdges.foldLeft(true)((acc, x) => {
       x.coveredPropositionEdges.size match {
         case 0 => acc & false
         case _ => {
@@ -68,6 +68,5 @@ object TestUtilsEx {
         } 
       }
     })
-    assert(result == isCorrectNegativeMeaning)
   }
 }
