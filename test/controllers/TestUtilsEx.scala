@@ -55,13 +55,18 @@ object TestUtilsEx {
 
   def isPosiNegaMatch(sentenceId:String, verifyingEdgesList:List[VerifyingEdges], isCorrectNegativeMeaning:Boolean): Unit = {
 
-    val targetverifyingEdges = verifyingEdgesList.filter(x => x.sentenceId.equals(sentenceId))
+    val targetverifyingEdges = verifyingEdgesList.filter(x => x.sentenceId.equals(sentenceId))        
     val result = targetverifyingEdges.foldLeft(true)((acc, x) => {
-      x.coveredPropositionEdges.foldLeft(acc)((acc2, y) => {
-        acc2 & (y.sourceNode.matchedKnowledgeNodes ::: y.destinationNode.matchedKnowledgeNodes).foldLeft(acc2)((acc3, z) => {
-          acc3 & z.isNegativeMeaning 
-        })
-      })
+      x.coveredPropositionEdges.size match {
+        case 0 => acc & false
+        case _ => {
+          x.coveredPropositionEdges.foldLeft(acc)((acc2, y) => {
+            acc2 & (y.sourceNode.matchedKnowledgeNodes ::: y.destinationNode.matchedKnowledgeNodes).foldLeft(acc2)((acc3, z) => {
+              acc3 & z.isNegativeMeaning 
+            })
+          })
+        } 
+      }
     })
     assert(result == isCorrectNegativeMeaning)
   }

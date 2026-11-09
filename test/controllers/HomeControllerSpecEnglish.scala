@@ -573,13 +573,13 @@ class HomeControllerSpecEnglish extends PlaySpec with BeforeAndAfter with Before
   //否定文、肯定文の不一致
   "The specification8" should {
     "returns an appropriate response" in {
-      val sentence1 = "The victim was not lying face down."      
-      val sentence2 = "Bloody words were not written on the floor."
+      val sentence1 = "On a cold winter day, The victim was not lying face down."      
+      val sentence2 = "Upon looking around the entire room, Bloody words were not written on the floor."
       val sentence3 = "This must not be a murder made to look like an accident."
       val sentence4 = "The culprit isn't among us."
 
-      val paraphrase1 = "The victim was lying face down."
-      val paraphrase2 = "Bloody words were written on the floor."
+      val paraphrase1 = "On a cold winter day, The victim was lying on his stomach."
+      val paraphrase2 = "Upon looking around the entire room, A dying message in blood written on the floor."
       val paraphrase3 = "This must be a murder made to look like an accident."
       val paraphrase4 = "The culprit is among us."
 
