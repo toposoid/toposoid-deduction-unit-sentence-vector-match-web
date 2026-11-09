@@ -544,23 +544,28 @@ class HomeControllerSpecJapanese extends PlaySpec with BeforeAndAfter with Befor
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(0))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
-      TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
+      TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, correctSize=0)      
+      val result1 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList)
+      assert(result1 == false)
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(1))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, correctSize=0)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
+      val result2 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList)
+      assert(result2 == false)
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(2))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, correctSize=0)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
+      val result3 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList)
+      assert(result3 == false)
 
       TestUtils.checkMatchedBothSide(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=correctSizes(3))
       TestUtils.checkMatchedOneSide(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)     
       TestUtils.checkNoMatch(json=json, sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, correctSize=0)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = false)
+      val result4 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList)
+      assert(result4 == false)
+
 
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
@@ -573,15 +578,15 @@ class HomeControllerSpecJapanese extends PlaySpec with BeforeAndAfter with Befor
   //否定文、肯定文の不一致
   "The specification8" should {
     "returns an appropriate response" in {
-      val sentence1 = "自然界の法則がすべての慣性系で同じように成り立っている。"
-      val sentence2 = "どの慣性系から見ても光の速さは一定である。"
-      val sentence3 = "運動する物体の速さの上限は光の速さである。"
-      val sentence4 = "特殊相対性理論では運動する物体の時間は進みかたが遅くなる。"
+      val sentence1 = "自然界の法則がすべての慣性系で同じように成り立っていない。"
+      val sentence2 = "どの慣性系から見ても光の速さは一定ではない。"
+      val sentence3 = "運動する物体の速さの上限は光の速さではない。"
+      val sentence4 = "特殊相対性理論では運動する物体の時間は進みかたが遅くならない。"
 
-      val paraphrase1 = "自然界の法則がすべての慣性系で同じように成り立っていない。"
-      val paraphrase2 = "どの慣性系から見ても光の速さは一定ではない。"
-      val paraphrase3 = "運動する物体の速さの上限は光の速さではない。"
-      val paraphrase4 = "特殊相対性理論では運動する物体の時間は進みかたが遅くならない。"
+      val paraphrase1 = "自然界の物理法則は例外なくどの慣性系でも成立する。"
+      val paraphrase2= "見ている慣性系によらず光速は不変である。"
+      val paraphrase3 = "物体の運動する速さは光の速さ未満である。"
+      val paraphrase4 = "特殊相対性理論において物体は運動することにより時間がゆっくり進む。"
 
       val propositionId1 = java.util.UUID.randomUUID().toString
       val sentenceId1 = java.util.UUID.randomUUID().toString
@@ -631,10 +636,15 @@ class HomeControllerSpecJapanese extends PlaySpec with BeforeAndAfter with Befor
       val aso:AnalyzedSentenceObjects = Json.parse(json).as[AnalyzedSentenceObjects]
       val verifyingEdgesList: List[VerifyingEdges] = Json.parse(jsonResult).as[List[VerifyingEdges]]
       
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
-      TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList, isCorrectNegativeMeaning = true)
+      val result1 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference1, verifyingEdgesList=verifyingEdgesList)
+      val result2 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference2, verifyingEdgesList=verifyingEdgesList)
+      val result3 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference3, verifyingEdgesList=verifyingEdgesList)
+      val result4 = TestUtilsEx.isPosiNegaMatch(sentenceId = sentenceIdForInference4, verifyingEdgesList=verifyingEdgesList)
+
+      assert(result1 == true)
+      assert(result2 == true)
+      assert(result3 == true)
+      assert(result4 == true)
 
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId1, featureId = sentenceId1, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
       deleteFeatureVector(FeatureVectorIdentifier(superiorId = propositionId2, featureId = sentenceId2, sentenceType = SentenceType.CLAIM.index, lang = "ja_JP", SuperiorType.PROPOSITION_ID.index, NonSentenceType.UNSPECIFIED.index, CaseGroupType.UNSPECIFIED.index), transversalState)
